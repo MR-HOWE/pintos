@@ -211,6 +211,15 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  //howe add 2017-04-25
+  struct thread *cur = thread_current ();
+  int running_priority = cur->priority;
+  if(priority > running_priority)
+  {
+      thread_yield();
+  }
+  //***************2017-04-25**************
+
   return tid;
 }
 
@@ -354,6 +363,18 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  //howe add 2017-04-25
+  if(!list_empty(&ready_list))
+  {
+    struct list_elem *front = list_front(&ready_list);
+    int front_priority = list_entry(front,struct thread,elem)->priority;
+    if(new_priority < front_priority)
+    {
+        thread_yield();
+    }
+  }
+  
+  //***************2017-04-25**************
 }
 
 /* Returns the current thread's priority. */
