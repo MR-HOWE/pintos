@@ -68,7 +68,10 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
+      //list_push_back (&sema->waiters, &thread_current ()->elem);
+      //added by howe lab3
+      list_insert_ordered (&sema->waiters, &thread_current ()->elem, (list_less_func *) &thread_cmp_priority, NULL);
+      //added by howe lab3
       thread_block ();
     }
   sema->value--;
@@ -113,11 +116,28 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
+  int front_priority = 0;
+  if (!list_empty (&sema->waiters))
+  {
+    list_sort(&sema->waiters,(list_less_func *) &thread_cmp_priority, NULL);
+    struct list_elem *front = list_front(&sema->waiters);//added by howe lab3
+    list_entry(front,struct thread,elem)->blocked = NULL;
+    front_priority = list_entry(front,struct thread,elem)->priority;//added by howe lab3
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
+  }
   sema->value++;
   intr_set_level (old_level);
+
+  //added by howe lab3
+  struct thread *cur = thread_current ();
+  int running_priority = cur->priority;
+
+  if(running_priority < front_priority)
+  {
+      thread_yield();
+  }
+  //added by howe lab3
 }
 
 static void sema_test_helper (void *sema_);
@@ -179,6 +199,15 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+
+  //lab3
+  lock->lock_priority = 0;
+}
+
+bool
+lock_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  return list_entry(a, struct lock, elem)->lock_priority > list_entry(b, struct lock, elem)->lock_priority;
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -196,8 +225,39 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  struct thread *cur = thread_current();
+  //lab3
+  if(lock->holder != NULL)
+  {
+    struct thread *holder = lock->holder;
+    struct lock *another = lock;
+    cur->blocked = another;
+    while(another != NULL && another->holder->priority < cur->priority)
+    {
+      //如果当前锁的优先级小于申请使用它的线程的优先级，
+      another->lock_priority = cur->priority;
+      
+      //更新locks队列（重新排序）
+      //更新锁的持有者进程的优先级
+      list_sort(&another->holder->locks,(list_less_func *) &lock_cmp_priority, NULL);
+      struct list_elem *front_lock = list_front(&another->holder->locks);
+      int front_lock_priority = list_entry(front_lock,struct lock,elem)->lock_priority;
+      another->holder->priority = front_lock_priority;
+
+      //更新就绪队列（重新排序）
+      thread_sort_by_priority();
+
+      //锁的持有者进程状态改为被捐赠
+      holder->donated = true;
+
+      another = another->holder->blocked;
+    }
+  }
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->lock_priority = cur->old_priority;
+  lock->holder = cur;
+  cur->blocked = NULL;
+  list_insert_ordered (&cur->locks, &lock->elem, (list_less_func *) &lock_cmp_priority, NULL);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -232,6 +292,24 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  lock->lock_priority = 0;
+  struct thread *cur = thread_current();
+  list_remove(&lock->elem);
+
+  //case1 : 线程不再拥有任何锁
+  //直接恢复本身的优先级，并将捐赠状态设为false
+  if(list_empty(&cur->locks))
+  {
+    cur->priority = cur->old_priority;
+    cur->donated = false;
+  }
+  //否则，设置优先级为剩余锁队列中最高优先级的锁的优先级
+  else
+  {
+    struct list_elem *front_lock = list_front(&cur->locks);
+    int front_lock_priority = list_entry(front_lock,struct lock,elem)->lock_priority;
+    cur->priority = front_lock_priority;
+  }
   sema_up (&lock->semaphore);
 }
 

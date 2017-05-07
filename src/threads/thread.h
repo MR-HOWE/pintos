@@ -102,6 +102,13 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    /*added by howe 2017-05-04 lab3*/
+    int old_priority;
+    struct list locks;//线程所持有的锁队列
+    bool donated;//线程是否被捐赠优先级
+    struct lock *blocked; //线程所被阻塞的锁
+    /*added by howe 2017-05-04 lab3*/
   };
 
 /* If false (default), use round-robin scheduler.
@@ -141,6 +148,7 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void blocked_thread_check (struct thread *t, void *aux UNUSED);//howe added
-bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
+void thread_sort_by_priority(void);
 
 #endif /* threads/thread.h */

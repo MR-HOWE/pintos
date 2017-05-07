@@ -240,7 +240,7 @@ thread_block (void)
 }
 
 bool
-thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux)
 {
   return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
@@ -360,21 +360,37 @@ thread_foreach (thread_action_func *func, void *aux)
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
-thread_set_priority (int new_priority) 
+thread_set_priority (int new_priority)//finally modified at lab3
 {
-  thread_current ()->priority = new_priority;
-  //howe add 2017-04-25
+  struct thread *cur = thread_current ();
+  if(cur->donated == false)//如果是非donated状态，普通设置即可
+  {
+    cur->priority = new_priority;
+    cur->old_priority = new_priority;
+  }
+  else//处于被捐赠状态
+  {
+    if(cur->priority > new_priority)
+    {
+      cur->old_priority = new_priority;
+    }
+    else
+    {
+      cur->old_priority = new_priority;
+      cur->priority = new_priority;
+    }
+  }
+  //howe add 2017-04-25 lab2
   if(!list_empty(&ready_list))
   {
     struct list_elem *front = list_front(&ready_list);
     int front_priority = list_entry(front,struct thread,elem)->priority;
-    if(new_priority < front_priority)
+    if(cur->priority < front_priority)
     {
         thread_yield();
     }
   }
-  
-  //***************2017-04-25**************
+  //howe add 2017-04-25 lab2
 }
 
 /* Returns the current thread's priority. */
@@ -502,6 +518,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   // list_push_back (&all_list, &t->allelem);
   list_insert_ordered (&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
+
+  t->old_priority = priority;
+  t->donated = false;
+  t->blocked = NULL;
+  list_init (&t->locks);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -627,6 +648,11 @@ blocked_thread_check (struct thread *t, void *aux UNUSED)
   }
 }
 
+void
+thread_sort_by_priority()
+{
+  list_sort(&ready_list,(list_less_func *) &thread_cmp_priority, NULL);
+}
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
