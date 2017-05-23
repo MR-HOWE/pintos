@@ -104,7 +104,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     /*added by howe 2017-05-04 lab3*/
-    int old_priority;
+    int old_priority;//线程的原优先级
     struct list locks;//线程所持有的锁队列
     bool donated;//线程是否被捐赠优先级
     struct lock *blocked; //线程所被阻塞的锁

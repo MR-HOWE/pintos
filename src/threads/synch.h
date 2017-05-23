@@ -24,8 +24,8 @@ struct lock
     struct semaphore semaphore; /* Binary semaphore controlling access. */
 
     /*added by howe 2017-05-04 lab3*/
-    struct list_elem elem;
-    int lock_priority;
+    struct list_elem elem;//用于在锁队列中排队
+    int lock_priority;//捐赠的优先级存于锁上
     /*added by howe 2017-05-04 lab3*/
   };
 
