@@ -38,6 +38,9 @@ static struct thread *initial_thread;
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
 
+static int load_avg;//added lab4
+//静态全局变量，只在定义它的源文件内有效，其他源文件无法访问
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -99,6 +102,8 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
+  load_avg = 0;//added lab4
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -403,7 +408,7 @@ thread_get_nice (void)
 }
 
 void//added lab4
-renew_priority(struct thread* t)
+renew_priority(struct thread* t, void *aux UNUSED)
 {
   // priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
   t->priority = PRI_MAX - FP_TO_INT((FP_DIV(t->recent_cpu,INT_TO_FP(4)))) - (t->nice * 2);
@@ -421,19 +426,20 @@ thread_get_load_avg (void)
 void
 renew_load_avg (void) 
 {
+  int ready_threads = list_size(&ready_list);
   //load_avg = (59/60)*load_avg + (1/60)*ready_threads
-  load_avg = FP_MUL(DIV_TO_FP(59/60),load_avg) + DIV_TO_FP(1/60)*ready_threads;
+  load_avg = FP_MUL(DIV_TO_FP(59,60),load_avg) + DIV_TO_FP(1,60)*ready_threads;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  return 100*FP_TO_INT(recent_cpu);
+  return 100*FP_TO_INT(thread_current ()->recent_cpu);
 }
 
 void
-renew_recent_cpu (struct thread* t) 
+renew_recent_cpu (struct thread* t, void *aux UNUSED) 
 {
   // recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
   t->recent_cpu = FP_MUL ( FP_DIV((2*load_avg),(2*load_avg + 1)) ,t->recent_cpu) + INT_TO_FP(t->nice);
@@ -523,7 +529,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  renew_priority(t);//added lab4
+  renew_priority(t,NULL);//added lab4
   t->magic = THREAD_MAGIC;
   t->nice = 0;//added lab4
   t->recent_cpu = 0;//added lab4

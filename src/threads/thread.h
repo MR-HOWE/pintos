@@ -108,8 +108,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
   };
 
-static int load_avg;//added lab4
-//静态全局变量，只在定义它的源文件内有效，其他源文件无法访问
+
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -149,5 +148,9 @@ int thread_get_load_avg (void);
 
 void blocked_thread_check (struct thread *t, void *aux UNUSED);//howe added
 bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void renew_priority(struct thread*t, void *aux UNUSED);//added lab4
+void renew_recent_cpu(struct thread *t, void *aux UNUSED);//added lab4
+void renew_load_avg(void);//added lab4
+
 
 #endif /* threads/thread.h */

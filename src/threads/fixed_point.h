@@ -9,7 +9,7 @@
 //n be integer
 typedef int fixed_t;
 #define FP_SHIFT_AMOUNT 16
-#define FP_TO_INT(x) (( x + 2 << (FP_SHIFT_AMOUNT - 1) ) >> FP_SHIFT_AMOUNT)
+#define FP_TO_INT(x) (( x + (2 << (FP_SHIFT_AMOUNT - 1)) ) >> FP_SHIFT_AMOUNT)
 //最近取整
 #define INT_TO_FP(n) (n << FP_SHIFT_AMOUNT)
 //#define FP_ADD(x,y) (x + y)
