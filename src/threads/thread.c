@@ -426,7 +426,7 @@ thread_get_load_avg (void)
 void
 renew_load_avg (void) 
 {
-  int ready_threads = list_size(&ready_list);
+  int ready_threads = list_size(&ready_list) + 1;
   //load_avg = (59/60)*load_avg + (1/60)*ready_threads
   load_avg = FP_MUL(DIV_TO_FP(59,60),load_avg) + DIV_TO_FP(1,60)*ready_threads;
 }

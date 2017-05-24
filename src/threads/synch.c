@@ -47,6 +47,7 @@ sema_init (struct semaphore *sema, unsigned value)
   ASSERT (sema != NULL);
 
   sema->value = value;
+
   list_init (&sema->waiters);
 }
 
@@ -304,8 +305,10 @@ cond_wait (struct condition *cond, struct lock *lock)
 bool//added lab4
 cond_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
-  return list_entry(a, struct semaphore_elem, elem)->semaphore.lock_priority > 
-         list_entry(b, struct semaphore_elem, elem)->semaphore.lock_priority;
+  struct semaphore_elem *sem_a = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *sem_b = list_entry(b, struct semaphore_elem, elem);
+  return list_entry(list_front(&sem_a->semaphore.waiters), struct thread, elem)->priority
+   > list_entry(list_front(&sem_b->semaphore.waiters), struct thread, elem)->priority;
 }
 
 /* If any threads are waiting on COND (protected by LOCK), then
