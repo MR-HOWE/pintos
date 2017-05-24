@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"//added lab4
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -132,7 +133,10 @@ thread_tick (void)
     user_ticks++;
 #endif
   else
+  {
     kernel_ticks++;
+    t->recent_cpu = t->recent_cpu + INT_TO_FP(1);
+  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -386,35 +390,55 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int new_nice) 
 {
-  /* Not yet implemented. */
+  thread_current ()->nice = new_nice;
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->nice;
+}
+
+void//added lab4
+renew_priority(struct thread* t)
+{
+  // priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
+  t->priority = PRI_MAX - FP_TO_INT((FP_DIV(t->recent_cpu,INT_TO_FP(4)))) - (t->nice * 2);
+  if(t->priority < PRI_MIN) t->priority = PRI_MIN;
+  if(t->priority > PRI_MAX) t->priority = PRI_MAX;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return 100*FP_TO_INT(load_avg);
+}
+
+void
+renew_load_avg (void) 
+{
+  //load_avg = (59/60)*load_avg + (1/60)*ready_threads
+  load_avg = FP_MUL(DIV_TO_FP(59/60),load_avg) + DIV_TO_FP(1/60)*ready_threads;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return 100*FP_TO_INT(recent_cpu);
 }
 
+void
+renew_recent_cpu (struct thread* t) 
+{
+  // recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
+  t->recent_cpu = FP_MUL ( FP_DIV((2*load_avg),(2*load_avg + 1)) ,t->recent_cpu) + INT_TO_FP(t->nice);
+}
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -499,7 +523,10 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  renew_priority(t);//added lab4
   t->magic = THREAD_MAGIC;
+  t->nice = 0;//added lab4
+  t->recent_cpu = 0;//added lab4
   // list_push_back (&all_list, &t->allelem);
   list_insert_ordered (&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
 }

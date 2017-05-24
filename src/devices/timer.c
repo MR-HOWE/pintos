@@ -187,6 +187,15 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_foreach (blocked_thread_check, NULL);//howe added
+  if(ticks % 4 == 0)
+  {
+    thread_foreach (renew_priority, NULL);
+  }
+  if(ticks % TIMER_FREQ == 0)
+  {
+    thread_foreach (renew_recent_cpu, NULL);
+    renew_load_avg();
+  }
   thread_tick ();
 }
 

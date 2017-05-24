@@ -16,6 +16,7 @@ enum thread_status
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
+//typedef a b 把b定义为a
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
@@ -95,6 +96,9 @@ struct thread
 
     int64_t ticks_blocked;//howe added
 
+    int nice;//added lab4
+    int recent_cpu;//added lab4
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -103,6 +107,9 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+static int load_avg;//added lab4
+//静态全局变量，只在定义它的源文件内有效，其他源文件无法访问
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
