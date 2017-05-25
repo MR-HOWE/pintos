@@ -131,13 +131,13 @@ sema_up (struct semaphore *sema)
   intr_set_level (old_level);
 
   //added by howe lab3
-  // struct thread *cur = thread_current ();
-  // int running_priority = cur->priority;
+  struct thread *cur = thread_current ();
+  int running_priority = cur->priority;
 
-  // if(running_priority < front_priority)
-  // {
-  //     thread_yield();
-  // }
+  if(running_priority < front_priority)
+  {
+      thread_yield();
+  }
   //added by howe lab3
 }
 

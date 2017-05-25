@@ -140,7 +140,10 @@ thread_tick (void)
   else
   {
     kernel_ticks++;
-    t->recent_cpu = t->recent_cpu + INT_TO_FP(1);
+    if(thread_mlfqs)
+    {
+      t->recent_cpu = t->recent_cpu + INT_TO_FP(1);
+    }
   }
 
   /* Enforce preemption. */
@@ -371,7 +374,6 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  if(thread_mlfqs) return;
   thread_current ()->priority = new_priority;
   if(!thread_mlfqs)
   {
