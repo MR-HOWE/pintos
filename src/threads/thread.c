@@ -372,7 +372,28 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  //howe add 2017-04-25
+  if(!thread_mlfqs)
+  {
+    if(cur->donated == false)//如果是非donated状态，普通设置即可
+    {
+      cur->priority = new_priority;
+      cur->old_priority = new_priority;
+    }
+    else//处于被捐赠状态
+    {
+      if(cur->priority > new_priority)
+      {
+        cur->old_priority = new_priority;
+      }
+      else
+      {
+        cur->old_priority = new_priority;
+        cur->priority = new_priority;
+      }
+    }
+    //howe add 2017-04-25 lab2
+  }
+  
   if(!list_empty(&ready_list))
   {
     struct list_elem *front = list_front(&ready_list);
@@ -535,6 +556,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->recent_cpu = 0;//added lab4
   // list_push_back (&all_list, &t->allelem);
   list_insert_ordered (&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
+
+  t->old_priority = priority;
+  t->donated = false;
+  t->blocked = NULL;
+  list_init (&t->locks);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -660,6 +686,11 @@ blocked_thread_check (struct thread *t, void *aux UNUSED)
   }
 }
 
+void
+thread_sort_by_priority()
+{
+  list_sort(&ready_list,(list_less_func *) &thread_cmp_priority, NULL);
+}
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
