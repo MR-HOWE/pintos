@@ -232,7 +232,7 @@ lock_acquire (struct lock *lock)
   struct thread *cur = thread_current ();
   if(!thread_mlfqs)
   {
-    
+    enum intr_level old_level = intr_disable ();//added lab4_v6
     //lab3
     if(lock->holder != NULL)
     {
@@ -260,16 +260,19 @@ lock_acquire (struct lock *lock)
         another = another->holder->blocked;
       }
     }
+    intr_set_level (old_level);//added lab4_v6
   }
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  enum intr_level old_level = intr_disable ();//added lab4_v6
   if(!thread_mlfqs)
   {
     lock->lock_priority = cur->old_priority;
     cur->blocked = NULL;
     list_insert_ordered (&cur->locks, &lock->elem, (list_less_func *) &lock_cmp_priority, NULL);
   }
+  intr_set_level (old_level);//added lab4_v6
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -304,6 +307,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  enum intr_level old_level = intr_disable ();//added lab4_v6
   if(!thread_mlfqs)
   {
     lock->lock_priority = 0;
@@ -325,6 +329,7 @@ lock_release (struct lock *lock)
       cur->priority = front_lock_priority;
     }
   }
+  intr_set_level (old_level);//added lab4_v6
   sema_up (&lock->semaphore);
 }
 

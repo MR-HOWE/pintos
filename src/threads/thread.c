@@ -374,7 +374,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  enum intr_level old_level = intr_disable ();//added lab4_v6
   if(!thread_mlfqs)
   {
     struct thread *cur = thread_current ();
@@ -397,7 +397,8 @@ thread_set_priority (int new_priority)
     }
     //howe add 2017-04-25 lab2
   }
-  
+  intr_set_level (old_level);//added lab4_v6
+
   if(!list_empty(&ready_list))
   {
     struct list_elem *front = list_front(&ready_list);
@@ -423,7 +424,7 @@ void
 thread_set_nice (int new_nice) 
 {
   thread_current ()->nice = new_nice;
-  renew_priority(thread_current (),NULL);//!!!important
+  //renew_priority(thread_current (),NULL);//!!!important
 }
 
 /* Returns the current thread's nice value. */
@@ -437,17 +438,19 @@ void//added lab4
 renew_priority(struct thread* t, void *aux UNUSED)
 {
   if(t == idle_thread) return;
-  // priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
-  t->priority = FP_TO_INT_TOWARD_ZERO(INT_TO_FP(PRI_MAX) - FP_DIV(t->recent_cpu,INT_TO_FP(4)) - INT_TO_FP((t->nice * 2)));
-  if(t->priority < PRI_MIN) t->priority = PRI_MIN;
-  if(t->priority > PRI_MAX) t->priority = PRI_MAX;
+  if(thread_mlfqs){
+    // priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
+    t->priority = FP_TO_INT_TOWARD_ZERO(INT_TO_FP(PRI_MAX) - FP_DIV(t->recent_cpu,INT_TO_FP(4)) - INT_TO_FP((t->nice * 2)));
+    if(t->priority < PRI_MIN) t->priority = PRI_MIN;
+    if(t->priority > PRI_MAX) t->priority = PRI_MAX;
+  }
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  return 100*FP_TO_INT(load_avg);
+  return FP_TO_INT(100*load_avg);
 }
 
 void
@@ -459,14 +462,14 @@ renew_load_avg (void)
     ready_threads++;
   }
   //load_avg = (59/60)*load_avg + (1/60)*ready_threads
-  load_avg =  ((59*load_avg)/60) + ready_threads/60;
+  load_avg =  ((59*load_avg)/60) + INT_TO_FP(ready_threads)/60;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  return 100*FP_TO_INT(thread_current ()->recent_cpu);
+  return FP_TO_INT(100*(thread_current ()->recent_cpu));
 }
 
 void
@@ -561,10 +564,16 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  renew_priority(t,NULL);//added lab4
+  
   t->magic = THREAD_MAGIC;
   t->nice = 0;//added lab4
   t->recent_cpu = 0;//added lab4
+
+  if(thread_mlfqs)//add if lab4_v6 !!!
+  {
+    renew_priority(t,NULL);//added lab4
+  }
+
   // list_push_back (&all_list, &t->allelem);
   list_insert_ordered (&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
 
